@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/csv"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -151,11 +152,19 @@ func NewEntriesFromFile(f io.Reader) (Entries, error) {
 				current.dirty = true
 				current.comments = append(current.comments, "usage is missing cloze deletion.")
 			}
+			if err := IsValidHTML(data); err != nil {
+				current.dirty = true
+				current.comments = append(current.comments, err.Error())
+			}
 		case EntryTranslation:
 			current.translation = data
 			if ClozeDeletionRegexp.FindStringSubmatch(data) == nil {
 				current.dirty = true
 				current.comments = append(current.comments, "translation is missing cloze deletion.")
+			}
+			if err := IsValidHTML(data); err != nil {
+				current.dirty = true
+				current.comments = append(current.comments, err.Error())
 			}
 		case EntryWord:
 			current.word = data
@@ -232,4 +241,43 @@ func main() {
 		fmt.Print("\n")
 	}
 	fmt.Println("generated", count, "entries.")
+}
+
+func IsValidHTML(s string) error {
+	tags := make([]string, 0)
+	for offset := 0; offset < len(s); {
+		start := strings.IndexByte(s[offset:], '<')
+		if start == -1 {
+			break
+		}
+		start += offset
+		if offset < start {
+			if strings.IndexByte(s[offset:start], '>') != -1 {
+				return errors.New("found closing bracket before an opening bracket")
+			}
+			offset = start
+		}
+		end := strings.IndexByte(s[start:], '>')
+		if end == -1 {
+			return errors.New("found opening bracket but no closing bracket")
+		}
+		end += offset
+		tag := strings.TrimSpace(s[start+1 : end])
+		if idx := strings.IndexByte(tag, ' '); idx >= 0 {
+			tag = tag[:idx]
+		}
+		if tag[0] == '/' {
+			if last, expected := tags[len(tags)-1], tag[1:]; last != expected {
+				return fmt.Errorf("mismatched close tag found: %s != %s", last, expected)
+			}
+			tags = tags[:len(tags)-1]
+		} else {
+			tags = append(tags, tag)
+		}
+		offset = end + 1
+	}
+	if len(tags) != 0 {
+		return fmt.Errorf("not all tags closed: %+v", tags)
+	}
+	return nil
 }
