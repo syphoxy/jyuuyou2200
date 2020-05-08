@@ -52,19 +52,19 @@ type Entry struct {
 	tags          []string
 }
 
-func (e Entry) ID() int64                { return e.id }
-func (e Entry) IsDirty() bool            { return e.dirty }
-func (e Entry) Comments() []string       { return e.comments }
-func (e Entry) Input() string            { return e.input }
-func (e Entry) Usage() string            { return e.usage }
-func (e Entry) Translation() string      { return e.translation }
-func (e Entry) Word() string             { return e.word }
-func (e Entry) Pronunciation() string    { return e.pronunciation }
-func (e Entry) Definition() string       { return e.definition }
-func (e Entry) Tags() []string           { return e.tags }
-func (e Entry) Audio(root string) string { return fmt.Sprintf("%s/%04d.mp3", root, e.id) }
+func (e Entry) ID() int64                  { return e.id }
+func (e Entry) IsDirty() bool              { return e.dirty }
+func (e Entry) Comments() []string         { return e.comments }
+func (e Entry) Input() string              { return e.input }
+func (e Entry) Usage() string              { return e.usage }
+func (e Entry) Translation() string        { return e.translation }
+func (e Entry) Word() string               { return e.word }
+func (e Entry) Pronunciation() string      { return e.pronunciation }
+func (e Entry) Definition() string         { return e.definition }
+func (e Entry) Tags() []string             { return e.tags }
+func (e Entry) Audio(prefix string) string { return fmt.Sprintf("[sound:%s-%04d.mp3]", prefix, e.id) }
 
-func (e Entry) CSV(prefix, root string) []string {
+func (e Entry) CSV(prefix string) []string {
 	return []string{
 		fmt.Sprintf("%s-%04d", prefix, e.ID()),
 		e.Input(),
@@ -73,14 +73,14 @@ func (e Entry) CSV(prefix, root string) []string {
 		e.Word(),
 		e.Pronunciation(),
 		e.Definition(),
+		e.Audio(prefix),
 		strings.Join(e.Tags(), ","),
-		e.Audio(root),
 	}
 }
 
 type Entries [2200]Entry
 
-func (entries Entries) Write(f io.Writer, prefix, root string) (int, int, error) {
+func (entries Entries) Write(f io.Writer, prefix string) (int, int, error) {
 	w := csv.NewWriter(f)
 	w.Comma = '\t'
 	count, dirty := 0, 0
@@ -91,7 +91,7 @@ func (entries Entries) Write(f io.Writer, prefix, root string) (int, int, error)
 		if entry.ID() == 0 || entry.IsDirty() {
 			continue
 		}
-		if err := w.Write(entry.CSV(prefix, root)); err != nil {
+		if err := w.Write(entry.CSV(prefix)); err != nil {
 			return count, dirty, fmt.Errorf("failed to write csv data: %w", err)
 		}
 		count++
@@ -186,10 +186,8 @@ func NewEntriesFromFile(f io.Reader) (Entries, error) {
 func main() {
 	cli := struct {
 		prefix string
-		root   string
 	}{}
-	flag.StringVar(&cli.prefix, "p", "JLPT-N2-JY-2200", "card ID prefix")
-	flag.StringVar(&cli.root, "r", "JLPT-N2-JY-2200", "media root path")
+	flag.StringVar(&cli.prefix, "p", "JLPT-N2-JY-2200", "prefix for card IDs and media files")
 	flag.Parse()
 	if len(flag.Args()) != 2 {
 		log.Fatalf("invalid number of arguments: usage: %s input.txt output.csv", flag.CommandLine.Name())
