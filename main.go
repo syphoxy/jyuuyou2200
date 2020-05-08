@@ -206,16 +206,16 @@ func main() {
 		log.Fatalf("failed to open input file: %s: %v", flag.Arg(0), err)
 	}
 	defer i.Close()
+	entries, err := NewEntriesFromFile(i)
+	if err != nil {
+		log.Fatalf("failed to process input file: %v", err)
+	}
 	w, err := os.Create(flag.Arg(1))
 	if err != nil {
 		log.Fatalf("failed to open output file: %s: %v", flag.Arg(1), err)
 	}
 	defer w.Close()
-	entries, err := NewEntriesFromFile(i)
-	if err != nil {
-		log.Fatalf("failed to process input file: %v", err)
-	}
-	count, dirty, err := entries.Write(w, cli.prefix, cli.root)
+	count, dirty, err := entries.Write(w, cli.prefix)
 	if err != nil {
 		log.Fatalf("failed to write output file: %v", err)
 	}
