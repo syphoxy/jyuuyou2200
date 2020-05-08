@@ -82,6 +82,7 @@ type Entries [2200]Entry
 
 func (entries Entries) Write(f io.Writer, prefix, root string) (int, int, error) {
 	w := csv.NewWriter(f)
+	w.Comma = '\t'
 	count, dirty := 0, 0
 	for _, entry := range entries {
 		if entry.IsDirty() {
