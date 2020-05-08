@@ -266,6 +266,9 @@ func IsValidHTML(s string) error {
 		if idx := strings.IndexByte(tag, ' '); idx >= 0 {
 			tag = tag[:idx]
 		}
+		if tag == "" {
+			return errors.New("empty tag found")
+		}
 		if tag[0] == '/' {
 			if last, expected := tags[len(tags)-1], tag[1:]; last != expected {
 				return fmt.Errorf("mismatched close tag found: %s != %s", last, expected)
